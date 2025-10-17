@@ -43,4 +43,4 @@ A Flutter mobile application for comprehensive wellness tracking, helping users 
 
 ## 🚀 Getting Started
 
-- Using Flutter for MAD II Year IV Project\*
+- Using Flutter for MAD II Year IV Project
