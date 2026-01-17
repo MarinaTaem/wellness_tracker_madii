@@ -18,9 +18,36 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     final studyProvider = Provider.of<StudyProvider>(context);
-    final tasks = studyProvider.tasks.where((task) {
-      return task.title.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+
+    // Group tasks by subjectId
+    final Map<String, List<StudyTask>> tasksBySubject = {};
+    for (var task in studyProvider.tasks) {
+      if (task.title.toLowerCase().contains(_searchQuery.toLowerCase())) {
+        tasksBySubject.putIfAbsent(task.subjectId, () => []).add(task);
+      }
+    }
+
+    // Sort subjects by name (optional)
+    final sortedSubjectIds = tasksBySubject.keys.toList()
+      ..sort((a, b) {
+        final nameA = studyProvider.subjects
+            .firstWhere((s) => s.id == a,
+                orElse: () => Subject(
+                    id: a,
+                    name: 'Unknown',
+                    color: Colors.grey,
+                    icon: Icons.book))
+            .name;
+        final nameB = studyProvider.subjects
+            .firstWhere((s) => s.id == b,
+                orElse: () => Subject(
+                    id: b,
+                    name: 'Unknown',
+                    color: Colors.grey,
+                    icon: Icons.book))
+            .name;
+        return nameA.compareTo(nameB);
+      });
 
     return Scaffold(
       appBar: AppBar(
@@ -28,6 +55,7 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       body: Column(
         children: [
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -43,60 +71,164 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                final subject = studyProvider.subjects
-                    .firstWhere((s) => s.id == task.subjectId);
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    leading: Container(
-                      width: 4,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: subject.color,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+          // Grouped tasks list
+          Expanded(
+            child: sortedSubjectIds.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No tasks found',
+                      style: TextStyle(fontSize: 18, color: Colors.grey),
                     ),
-                    title: Text(
-                      task.title,
-                      style: TextStyle(
-                        decoration: task.status == TaskStatus.completed
-                            ? TextDecoration.lineThrough
-                            : null,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${subject.name} • Due ${DateFormat('MMM d').format(task.dueDate)}',
-                    ),
-                    trailing: Checkbox(
-                      value: task.status == TaskStatus.completed,
-                      onChanged: (value) {
-                        studyProvider.updateTaskStatus(task.id,
-                            value! ? TaskStatus.completed : TaskStatus.todo);
-                      },
-                    ),
+                  )
+                : ListView.builder(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: sortedSubjectIds.length,
+                    itemBuilder: (context, index) {
+                      final subjectId = sortedSubjectIds[index];
+                      final tasks = tasksBySubject[subjectId]!;
+
+                      final subject = studyProvider.subjects.firstWhere(
+                        (s) => s.id == subjectId,
+                        orElse: () => Subject(
+                          id: subjectId,
+                          name: 'Unknown Subject',
+                          color: Colors.grey,
+                          icon: Icons.book,
+                        ),
+                      );
+
+                      final completedCount = tasks
+                          .where((t) => t.status == TaskStatus.completed)
+                          .length;
+                      final totalCount = tasks.length;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Subject Header Card
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: subject.color.withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  subject.icon,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    subject.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '$completedCount/$totalCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Tasks under this subject
+                          ...tasks.map((task) {
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 1,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                leading: Container(
+                                  width: 5,
+                                  decoration: BoxDecoration(
+                                    color: subject.color,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                                title: Text(
+                                  task.title,
+                                  style: TextStyle(
+                                    decoration:
+                                        task.status == TaskStatus.completed
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                    color: task.status == TaskStatus.completed
+                                        ? Colors.grey.shade700
+                                        : null,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Due ${DateFormat('MMM d').format(task.dueDate)} ${task.priority > 3 ? ' • High Priority' : ''}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                                trailing: Checkbox(
+                                  value: task.status == TaskStatus.completed,
+                                  activeColor: subject.color,
+                                  onChanged: (value) {
+                                    studyProvider.updateTaskStatus(
+                                      task.id,
+                                      value!
+                                          ? TaskStatus.completed
+                                          : TaskStatus.todo,
+                                    );
+                                  },
+                                ),
+                                onTap: () {
+                                  // Optional: open task detail/edit screen
+                                },
+                              ),
+                            );
+                          }).toList(),
+
+                          const SizedBox(height: 8),
+                        ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const AddTaskScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddTaskScreen()),
+          );
         },
-        child: const Icon(Icons.add_task),
+        icon: const Icon(Icons.add_task),
+        label: const Text('Add Task'),
       ),
     );
   }

@@ -23,9 +23,11 @@ class StudyProvider with ChangeNotifier {
     _goals = await DatabaseHelper.instance.getAllGoal();
 
     // Tast data - initial data if empty
-    if (_subjects.isEmpty) {
-      _addInitialData();
+    if (_subjects.isEmpty && _goals.isEmpty) {
+      await _addInitialData();
     }
+
+    notifyListeners();
   }
 
   Future<void> _addInitialData() async {
@@ -63,11 +65,29 @@ class StudyProvider with ChangeNotifier {
       await addTask(task);
     }
 
+    final goalId = DateTime.now().millisecondsSinceEpoch.toString();
     final initialGoal = StudyGoal(
       id: '1',
       title: 'Finish Semester Project',
-      progress: 0.65,
+      description: 'Learn Flutter from basic to advaced state management.',
       deadline: DateTime.now().add(const Duration(days: 30)),
+      steps: [
+        GoalStep(
+            id: 's1',
+            goalId: goalId,
+            title: 'Learn Dart Basics',
+            isCompleted: true),
+        GoalStep(
+            id: 's2',
+            goalId: goalId,
+            title: 'Understand Widgets',
+            isCompleted: false),
+        GoalStep(
+            id: 's3',
+            goalId: goalId,
+            title: 'Master Provider',
+            isCompleted: false),
+      ],
     );
     await addGoal(initialGoal);
   }
@@ -121,5 +141,40 @@ class StudyProvider with ChangeNotifier {
     await DatabaseHelper.instance.insertGoal(goal);
     _goals.add(goal);
     notifyListeners();
+  }
+
+  Future<void> toggleStepCompletion(String goalId, String stepId) async {
+    final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+    if (goalIndex >= 0) {
+      final goal = _goals[goalIndex];
+      final stepIndex = goal.steps.indexWhere((s) => s.id == stepId);
+      if (stepIndex >= 0) {
+        final step = goal.steps[stepIndex];
+        final updateStep = GoalStep(
+          id: step.id,
+          goalId: step.goalId,
+          title: step.title,
+          isCompleted: !step.isCompleted,
+        );
+        await DatabaseHelper.instance.updateGoalStep(updateStep);
+
+        // Update local state
+        final updateSteps = List<GoalStep>.from(goal.steps);
+        updateSteps[stepIndex] = updateStep;
+
+        _goals[goalIndex] = StudyGoal(
+          id: goal.id,
+          title: goal.title,
+          description: goal.description,
+          deadline: goal.deadline,
+          steps: updateSteps,
+        );
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> deleteGoal(String id) async {
+    await DatabaseHelper.instance.deleteGoal(id);
   }
 }

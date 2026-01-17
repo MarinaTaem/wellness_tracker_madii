@@ -20,9 +20,39 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 9, // version add goal feature
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    print("Update databse with version $oldVersion");
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE goals ADD COLUMN description TEXT');
+      await db.execute('''
+        CREATE TABLE goal_steps (
+          id TEXT PRIMARY KEY,
+          goalId TEXT NOT NULL,
+          title TEXT NOT NULL,
+          isCompleted INTEGER NOT NULL,
+          FOREIGN KEY (goalId) REFERENCES goals (id) ON DELETE CASCADE
+        )
+      ''');
+      print("Done execute!");
+    }
+    if (oldVersion < 9) {
+      // Recreate goals table with correct schema
+      await db.execute('DROP TABLE IF EXISTS goals');
+      await db.execute('''
+        CREATE TABLE goals (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT,
+          deadline TEXT NOT NULL
+        )
+      ''');
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -44,7 +74,7 @@ class DatabaseHelper {
         dueDate TEXT NOT NULL,
         status INTEGER NOT NULL,
         priority INTEGER NOT NULL,
-        FOREIGN KEY (subjectId) REFERENCES subjects (id) on DELETE CASCADE
+        FOREIGN KEY (subjectId) REFERENCES subjects (id) ON DELETE CASCADE
       )
     ''');
 
@@ -52,8 +82,18 @@ class DatabaseHelper {
       CREATE TABLE goals (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
-        progress REAL NOT NULL,
+        description TEXT,
         deadline TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE goal_steps (
+        id TEXT PRIMARY KEY,
+        goalId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        isCompleted INTEGER NOT NULL,
+        FOREIGN KEY (goalId) REFERENCES goals (id) ON DELETE CASCADE
       )
     ''');
   }
@@ -117,16 +157,52 @@ class DatabaseHelper {
   // Goal CRUD
   Future<void> insertGoal(StudyGoal goal) async {
     final db = await instance.database;
-    await db.insert(
-      'goals',
-      goal.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.transaction((txn) async {
+      await txn.insert(
+        'goals',
+        goal.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      for (var step in goal.steps) {
+        await txn.insert(
+          'goal_steps',
+          step.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   Future<List<StudyGoal>> getAllGoal() async {
     final db = await instance.database;
-    final result = await db.query('goals');
-    return result.map((json) => StudyGoal.fromMap(json)).toList();
+    final goalResult = await db.query('goals');
+
+    List<StudyGoal> goals = [];
+    for (var goalMap in goalResult) {
+      final stepResult = await db
+          .query('goal_steps', where: 'goalId = ?', whereArgs: [goalMap['id']]);
+      final steps = stepResult.map((s) => GoalStep.fromMap(s)).toList();
+      goals.add(StudyGoal.fromMap(goalMap, steps: steps));
+    }
+
+    return goals;
+  }
+
+  Future<void> updateGoalStep(GoalStep step) async {
+    final db = await instance.database;
+    await db.update('goal_steps', step.toMap(),
+        where: 'id = ?', whereArgs: [step.id]);
+  }
+
+  Future<void> deleteGoal(String id) async {
+    final db = await instance.database;
+    await db.delete('goals', where: 'id = ?', whereArgs: [id]);
+    // casecade delete should handle steps
+    await db.delete('goal_steps', where: 'goalId = ?', whereArgs: [id]);
+  }
+
+  Future<void> close() async {
+    final db = await instance.database;
+    db.close();
   }
 }

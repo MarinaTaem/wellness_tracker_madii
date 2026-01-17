@@ -52,6 +52,7 @@ class StudyTask {
     this.status = TaskStatus.todo,
     this.priority = 1,
   });
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -66,44 +67,87 @@ class StudyTask {
 
   factory StudyTask.fromMap(Map<String, dynamic> map) {
     return StudyTask(
-        id: map['id'],
-        title: map['title'],
-        description: map['description'],
-        subjectId: map['subjectId'],
-        dueDate: DateTime.parse(map['dueDate']),
-        status: TaskStatus.values[map['status']],
-        priority: map['priority']);
+      id: map['id'],
+      title: map['title'],
+      description: map['description'],
+      subjectId: map['subjectId'],
+      dueDate: DateTime.parse(map['dueDate']),
+      status: TaskStatus.values[map['status']],
+      priority: map['priority'],
+    );
+  }
+}
+
+class GoalStep {
+  final String id;
+  final String goalId;
+  final String title;
+  final bool isCompleted;
+
+  GoalStep({
+    required this.id,
+    required this.goalId,
+    required this.title,
+    this.isCompleted = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'goalId': goalId,
+      'title': title,
+      'isCompleted': isCompleted ? 1 : 0,
+    };
+  }
+
+  factory GoalStep.fromMap(Map<String, dynamic> map) {
+    return GoalStep(
+      id: map['id'],
+      goalId: map['goalId'],
+      title: map['title'],
+      isCompleted: map['isCompleted'] == 1,
+    );
   }
 }
 
 class StudyGoal {
   final String id;
   final String title;
-  final double progress; // 0.0 to 1.0
+  final String description;
   final DateTime deadline;
+  final List<GoalStep> steps;
 
   StudyGoal({
     required this.id,
     required this.title,
-    required this.progress,
+    required this.description,
     required this.deadline,
+    this.steps = const [],
   });
+
+  double get progress {
+    if (steps.isEmpty) return 0.0;
+    final completedCount = steps.where((step) => step.isCompleted).length;
+    return completedCount / steps.length;
+  }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
-      'progress': progress,
+      'description': description,
       'deadline': deadline.toIso8601String(),
     };
   }
 
-  factory StudyGoal.fromMap(Map<String, dynamic> map) {
+  factory StudyGoal.fromMap(Map<String, dynamic> map,
+      {List<GoalStep> steps = const []}) {
     return StudyGoal(
       id: map['id'],
       title: map['title'],
-      progress: map['progress'],
+      description: map['description'] ?? '',
       deadline: DateTime.parse(map['deadline']),
+      steps: steps,
     );
   }
 }
