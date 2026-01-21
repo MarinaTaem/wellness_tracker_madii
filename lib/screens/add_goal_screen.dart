@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:wellness_tracker/core/app_color.dart';
 import '../models/study_models.dart';
 import '../providers/study_provider.dart';
 
@@ -78,85 +79,176 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create New Goal'),
-        actions: [
-          IconButton(onPressed: _saveGoal, icon: const Icon(Icons.check)),
-        ],
+    final inputTheme = Theme.of(context).inputDecorationTheme.copyWith(
+          floatingLabelStyle: const TextStyle(color: AppColor.primaryColor),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                const BorderSide(color: AppColor.primaryColor, width: 1.5),
+          ),
+        );
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        inputDecorationTheme: inputTheme,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('New Goal'),
+          centerTitle: true,
+          backgroundColor: AppColor.primaryColor,
+          foregroundColor: Colors.white,
+        ),
+        bottomNavigationBar: Padding(
           padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Goal Title',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) =>
-                  value!.isEmpty ? 'Please enter a title' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: const Text('Deadline'),
-              subtitle: Text(DateFormat('MMM d, yyyy').format(_selectedDate)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () => _selectDate(context),
+          child: ElevatedButton(
+            onPressed: _saveGoal,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColor.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                side: const BorderSide(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(16),
               ),
+              elevation: 2,
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Steps to achieve this goal',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            child: const Text(
+              'Create Goal',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            ..._stepControllers.asMap().entries.map((entry) {
-              int idx = entry.key;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(
+          ),
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _sectionTitle('Goal Details'),
+              _card(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: entry.value,
-                        decoration: InputDecoration(
-                          labelText: 'Step ${idx + 1}',
-                          border: const OutlineInputBorder(),
-                        ),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Goal Title',
+                        hintText: 'e.g. Improve Flutter skills',
+                        prefixIcon:
+                            Icon(Icons.flag, color: AppColor.primaryColor),
+                        border: InputBorder.none,
                       ),
+                      validator: (value) =>
+                          value!.isEmpty ? 'Please enter a title' : null,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline,
-                          color: Colors.red),
-                      onPressed: () => _removeStep(idx),
+                    const Divider(),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'Why is this goal important?',
+                        prefixIcon:
+                            Icon(Icons.notes, color: AppColor.primaryColor),
+                        border: InputBorder.none,
+                      ),
                     ),
                   ],
                 ),
-              );
-            }),
-            TextButton.icon(
-              onPressed: _addStep,
-              icon: const Icon(Icons.add),
-              label: const Text('Add another step'),
-            ),
-          ],
+              ),
+              const SizedBox(height: 24),
+              _sectionTitle('Deadline'),
+              _card(
+                child: ListTile(
+                  leading: const Icon(Icons.calendar_today,
+                      color: AppColor.primaryColor),
+                  title: const Text('Target Date'),
+                  subtitle:
+                      Text(DateFormat('MMM d, yyyy').format(_selectedDate)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _selectDate(context),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _sectionTitle('Steps'),
+              _card(
+                child: Column(
+                  children: _stepControllers.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: entry.value,
+                              decoration: InputDecoration(
+                                labelText: 'Step ${idx + 1}',
+                                hintText: 'Describe this step',
+                                prefixIcon: const Icon(
+                                  Icons.check_circle_outline,
+                                  color: AppColor.primaryColor,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.remove_circle,
+                              color: Colors.redAccent,
+                            ),
+                            onPressed: () => _removeStep(idx),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _addStep,
+                icon: const Icon(Icons.add, color: AppColor.primaryColor),
+                label: const Text(
+                  'Add another step',
+                  style: TextStyle(color: AppColor.primaryColor),
+                ),
+              ),
+              const SizedBox(height: 80),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+Widget _sectionTitle(String title) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppColor.primaryColor,
+      ),
+    ),
+  );
+}
+
+Widget _card({required Widget child}) {
+  return Card(
+    elevation: 1,
+    shadowColor: AppColor.primaryColor.withOpacity(0.1),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: child,
+    ),
+  );
 }

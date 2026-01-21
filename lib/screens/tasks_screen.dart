@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:wellness_tracker/screens/add_task_screen.dart';
+import 'package:wellness_tracker/screens/task_detail_screen.dart';
+import 'package:wellness_tracker/widgets/task_card.dart';
 import '../providers/study_provider.dart';
 import '../models/study_models.dart';
 
@@ -157,62 +159,95 @@ class _TasksScreenState extends State<TasksScreen> {
 
                           // Tasks under this subject
                           ...tasks.map((task) {
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 1,
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
-                                ),
-                                leading: Container(
-                                  width: 5,
-                                  decoration: BoxDecoration(
-                                    color: subject.color,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                ),
-                                title: Text(
-                                  task.title,
-                                  style: TextStyle(
-                                    decoration:
-                                        task.status == TaskStatus.completed
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                    color: task.status == TaskStatus.completed
-                                        ? Colors.grey.shade700
-                                        : null,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  'Due ${DateFormat('MMM d').format(task.dueDate)} ${task.priority > 3 ? ' • High Priority' : ''}',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                                trailing: Checkbox(
-                                  value: task.status == TaskStatus.completed,
-                                  activeColor: subject.color,
-                                  onChanged: (value) {
-                                    studyProvider.updateTaskStatus(
-                                      task.id,
-                                      value!
-                                          ? TaskStatus.completed
-                                          : TaskStatus.todo,
-                                    );
-                                  },
-                                ),
-                                onTap: () {
-                                  // Optional: open task detail/edit screen
-                                },
+                            final subject = studyProvider.subjects.firstWhere(
+                              (s) => s.id == task.subjectId,
+                              orElse: () => Subject(
+                                id: task.subjectId,
+                                userId: '',
+                                name: 'Unknown Subject',
+                                color: Colors.grey,
+                                icon: Icons.book,
                               ),
                             );
+                            return TaskCard(
+                              task: task,
+                              subjectColor: subject.color,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        TaskDetailScreen(task: task),
+                                  ),
+                                );
+                              },
+                              onToggleStatus: () {
+                                final newStatus =
+                                    task.status == TaskStatus.completed
+                                        ? TaskStatus.todo
+                                        : TaskStatus.completed;
+                                studyProvider.updateTaskStatus(
+                                    task.id, newStatus);
+                              },
+                            );
+
+                            // Card(
+
+                            //   margin: const EdgeInsets.symmetric(
+                            //     horizontal: 4,
+                            //     vertical: 5,
+                            //   ),
+                            //   shape: RoundedRectangleBorder(
+                            //     borderRadius: BorderRadius.circular(12),
+                            //   ),
+                            //   elevation: 1,
+                            //   child: ListTile(
+                            //     contentPadding: const EdgeInsets.symmetric(
+                            //       horizontal: 16,
+                            //       vertical: 4,
+                            //     ),
+                            // leading: Container(
+                            //   width: 5,
+                            //   decoration: BoxDecoration(
+                            //     color: subject.color,
+                            //     borderRadius: BorderRadius.circular(3),
+                            //   ),
+                            //     ),
+                            //     title: Text(
+                            //       task.title,
+                            //       style: TextStyle(
+                            //         decoration:
+                            //             task.status == TaskStatus.completed
+                            //                 ? TextDecoration.lineThrough
+                            //                 : null,
+                            //         color: task.status == TaskStatus.completed
+                            //             ? Colors.grey.shade700
+                            //             : null,
+                            //       ),
+                            //     ),
+                            //     subtitle: Text(
+                            //       'Due ${DateFormat('MMM d').format(task.dueDate)} ${task.priority > 3 ? ' • High Priority' : ''}',
+                            //       style: TextStyle(
+                            //         color: Colors.grey.shade600,
+                            //       ),
+                            //     ),
+                            //     trailing: Checkbox(
+                            //       value: task.status == TaskStatus.completed,
+                            //       activeColor: subject.color,
+                            //       onChanged: (value) {
+                            //         studyProvider.updateTaskStatus(
+                            //           task.id,
+                            //           value!
+                            //               ? TaskStatus.completed
+                            //               : TaskStatus.todo,
+                            //         );
+                            //       },
+                            //     ),
+                            //     onTap: () {
+                            //       // Optional: open task detail/edit screen
+                            //     },
+                            //   ),
+                            // );
                           }).toList(),
 
                           const SizedBox(height: 8),

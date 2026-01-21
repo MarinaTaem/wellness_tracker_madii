@@ -209,6 +209,24 @@ class StudyProvider with ChangeNotifier {
     }
   }
 
+  Future<void> updateTask(StudyTask updatedTask) async {
+    final index = _tasks.indexWhere((t) => t.id == updatedTask.id);
+    if (index >= 0) {
+      // Update in database
+      await DatabaseHelper.instance.updateTask(updatedTask);
+
+      // Update in local list
+      _tasks[index] = updatedTask;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTask(String id) async {
+    await DatabaseHelper.instance.deleteTask(id);
+    _tasks.removeWhere((t) => t.id == id);
+    notifyListeners();
+  }
+
   // Goal CRUD
   Future<void> addGoal(StudyGoal goal) async {
     await DatabaseHelper.instance.insertGoal(goal);

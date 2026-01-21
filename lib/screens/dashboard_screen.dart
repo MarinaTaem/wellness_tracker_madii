@@ -76,69 +76,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildStatCards(completedTasks, totalTasks, totalFocusMinutes),
             const SizedBox(height: 32),
             const Text(
-              'Focus Time per Subject (min)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            focusPerSubject.isEmpty
-                ? const Center(child: Text('No focus data available'))
-                : SizedBox(
-                    height: 200,
-                    child: BarChart(
-                      BarChartData(
-                        gridData: const FlGridData(show: false),
-                        titlesData: FlTitlesData(
-                          show: true,
-                          leftTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                int index = value.toInt();
-                                if (index >= 0 &&
-                                    index < focusPerSubject.keys.length) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      focusPerSubject.keys
-                                          .elementAt(index)
-                                          .substring(0, 3),
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                  );
-                                }
-                                return const Text('');
-                              },
-                            ),
-                          ),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        barGroups: focusPerSubject.entries
-                            .toList()
-                            .asMap()
-                            .entries
-                            .map((entry) {
-                          return BarChartGroupData(
-                            x: entry.key,
-                            barRods: [
-                              BarChartRodData(
-                                  toY: entry.value.value.toDouble(),
-                                  color: const Color(0xFF6C63FF),
-                                  width: 16,
-                                  borderRadius: BorderRadius.circular(4))
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-            const SizedBox(height: 32),
-            const Text(
               'Task Distribution',
               style: TextStyle(
                 fontSize: 18,
@@ -160,7 +97,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const Color(0xFF03DAC6),
                             Colors.orange,
                             Colors.pink,
-                            Colors.amber
+                            Colors.amber,
+                            Colors.green,
+                            Colors.purple,
+                            Colors.amberAccent
                           ];
                           return PieChartSectionData(
                             value: entry.value.toDouble(),
@@ -211,16 +151,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           children: [
             _statCard(
-                'Total Tasks', total.toString(), Icons.assignment, Colors.blue),
-            const SizedBox(width: 16),
-            _statCard('Completed', completed.toString(), Icons.check_circle,
-                Colors.green),
+              'Focus Time',
+              '${focus}m',
+              Icons.timer,
+              Colors.orange,
+            ),
             const SizedBox(width: 16),
             _statCard(
-              'Efficiency',
-              total == 0 ? '0%' : '${(completed / total * 100).toInt()}%',
-              Icons.trending_up,
-              Colors.purple,
+              'Completed',
+              completed.toString(),
+              Icons.check_circle,
+              Colors.green,
             ),
           ],
         ),
@@ -228,10 +169,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           children: [
             _statCard(
-              'Focus Time',
-              '${focus}m',
-              Icons.timer,
-              Colors.orange,
+              'Total Tasks',
+              total.toString(),
+              Icons.assignment,
+              Colors.blue,
             ),
             const SizedBox(width: 16),
             _statCard(

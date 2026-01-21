@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:provider/provider.dart';
+import 'package:wellness_tracker/core/app_color.dart';
 import 'package:wellness_tracker/providers/study_provider.dart';
 
 class FocusScreen extends StatefulWidget {
@@ -94,7 +95,7 @@ class _FocusScreenState extends State<FocusScreen> {
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [1, 25, 45, 60].map((mins) {
+              children: [15, 25, 45, 60].map((mins) {
                 bool isSelected = _selectedMinutes == mins;
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -106,14 +107,14 @@ class _FocusScreenState extends State<FocusScreen> {
                         : (selected) {
                             if (selected) _updateDuration(mins);
                           },
-                    selectedColor: const Color(0xFF6C63FF),
+                    selectedColor: AppColor.primaryColor,
                     labelStyle: TextStyle(
                         color: isSelected ? Colors.white : Colors.black),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 52),
             CircularPercentIndicator(
               radius: 120.0,
               lineWidth: 12.0,
@@ -123,7 +124,7 @@ class _FocusScreenState extends State<FocusScreen> {
                 style:
                     const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
               ),
-              progressColor: const Color(0xFF6C63FF),
+              progressColor: AppColor.primaryColor,
               backgroundColor: Colors.grey.withOpacity(0.2),
               circularStrokeCap: CircularStrokeCap.round,
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:wellness_tracker/core/app_color.dart';
 
 import '../models/study_models.dart';
 import '../providers/study_provider.dart';
@@ -79,72 +80,97 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add task'),
-        leading: IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: Icon(Icons.arrow_back)),
+        title: const Text('New Task'),
+        centerTitle: true,
+        backgroundColor: AppColor.primaryColor,
+        foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Title
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Task Title *',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.title),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a title';
-                  }
-                  return null;
-                },
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ElevatedButton(
+          onPressed: _submitTask,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColor.primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Text(
+            'Create Task',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _sectionTitle('Task Details'),
+            _card(
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      hintText: 'e.g. Finish math assignment',
+                      prefixIcon: Icon(
+                        Icons.title,
+                        color: AppColor.primaryColor,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Title is required'
+                        : null,
+                  ),
+                  const Divider(),
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Optional notes',
+                      prefixIcon: Icon(
+                        Icons.notes,
+                        color: AppColor.primaryColor,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
+            ),
 
-              // Description
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
-                ),
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-
-              // Subject Dropdown - pulls from Provider
-              Consumer<StudyProvider>(
-                builder: (context, studyProvider, child) {
+            const SizedBox(height: 24),
+            _sectionTitle('Subject'),
+            _card(
+              child: Consumer<StudyProvider>(
+                builder: (context, studyProvider, _) {
                   final subjects = studyProvider.subjects;
 
                   if (subjects.isEmpty) {
-                    return const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text('No subjects available. Add one first!'),
-                      ),
+                    return const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('No subjects available. Add one first.'),
                     );
                   }
 
                   return DropdownButtonFormField<Subject>(
                     value: _selectedSubject,
                     decoration: const InputDecoration(
-                      labelText: 'Subject *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.book),
+                      hintText: 'Choose subject',
+                      prefixIcon: Icon(
+                        Icons.book,
+                        color: AppColor.primaryColor,
+                      ),
+                      border: InputBorder.none,
                     ),
-                    hint: const Text('Choose a subject'),
-                    items: subjects.map((Subject subject) {
-                      return DropdownMenuItem<Subject>(
+                    items: subjects.map((subject) {
+                      return DropdownMenuItem(
                         value: subject,
                         child: Row(
                           children: [
@@ -155,107 +181,120 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         ),
                       );
                     }).toList(),
-                    onChanged: (Subject? newValue) {
-                      setState(() {
-                        _selectedSubject = newValue;
-                      });
+                    onChanged: (value) {
+                      setState(() => _selectedSubject = value);
                     },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Please select a subject';
-                      }
-                      return null;
-                    },
+                    validator: (value) =>
+                        value == null ? 'Please select a subject' : null,
                   );
                 },
               ),
-              const SizedBox(height: 16),
+            ),
 
-              // Due Date
-              ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            const SizedBox(height: 24),
+            _sectionTitle('Schedule'),
+            _card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.calendar_today,
+                  color: AppColor.primaryColor,
                 ),
-                leading: const Icon(Icons.calendar_today),
-                title: Text(
-                  'Due Date: ${DateFormat('MMM dd, yyyy').format(_selectedDate)}',
+                title: const Text('Due Date'),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy').format(_selectedDate),
                 ),
-                trailing: const Icon(Icons.edit_calendar),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: AppColor.primaryColor,
+                ),
                 onTap: () => _selectDueDate(context),
               ),
-              const SizedBox(height: 16),
+            ),
 
-              // Status
-              DropdownButtonFormField<TaskStatus>(
-                value: _selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.flag),
-                ),
-                items: TaskStatus.values.map((status) {
-                  String label = status.toString().split('.').last;
-                  label = label[0].toUpperCase() + label.substring(1);
-                  if (label == 'Inprogress') label = 'In Progress';
-                  return DropdownMenuItem(
-                    value: status,
-                    child: Text(label),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedStatus = value;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Priority
-              DropdownButtonFormField<int>(
-                value: _selectedPriority,
-                decoration: const InputDecoration(
-                  labelText: 'Priority (1 = Highest)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.priority_high),
-                ),
-                items: [1, 2, 3, 4, 5].map((p) {
-                  return DropdownMenuItem(
-                    value: p,
-                    child: Text('Priority $p${p == 1 ? ' (Highest)' : ''}'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedPriority = value;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 32),
-
-              // Submit Button
-              ElevatedButton(
-                onPressed: _submitTask,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 24),
+            _sectionTitle('Task Settings'),
+            _card(
+              child: Column(
+                children: [
+                  DropdownButtonFormField<TaskStatus>(
+                    value: _selectedStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      prefixIcon: Icon(
+                        Icons.flag,
+                        color: AppColor.primaryColor,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    items: TaskStatus.values.map((status) {
+                      String label =
+                          status.toString().split('.').last.toUpperCase();
+                      if (label == 'INPROGRESS') label = 'IN PROGRESS';
+                      return DropdownMenuItem(
+                        value: status,
+                        child: Text(label),
+                      );
+                    }).toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedStatus = value!),
                   ),
-                ),
-                child: const Text(
-                  'Add Task',
-                  style: TextStyle(fontSize: 18),
-                ),
+                  const Divider(),
+                  DropdownButtonFormField<int>(
+                    value: _selectedPriority,
+                    decoration: const InputDecoration(
+                      labelText: 'Priority',
+                      prefixIcon: Icon(
+                        Icons.priority_high,
+                        color: AppColor.primaryColor,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    items: [1, 2, 3, 4, 5].map((p) {
+                      return DropdownMenuItem(
+                        value: p,
+                        child: Text(
+                          p == 1 ? 'High Priority' : 'Priority $p',
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedPriority = value!),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 80), // space for bottom button
+          ],
         ),
       ),
     );
   }
+}
+
+Widget _sectionTitle(String title) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColor.primaryColor),
+    ),
+  );
+}
+
+Widget _card({required Widget child}) {
+  return Card(
+    elevation: 0,
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: child,
+    ),
+  );
 }

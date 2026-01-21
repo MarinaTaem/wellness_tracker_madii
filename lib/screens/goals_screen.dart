@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:intl/intl.dart';
+import 'package:wellness_tracker/core/app_color.dart';
 import 'package:wellness_tracker/screens/add_goal_screen.dart';
 import 'package:wellness_tracker/screens/goal_detail_screen.dart';
 import '../providers/study_provider.dart';
@@ -69,7 +70,7 @@ class GoalsScreen extends StatelessWidget {
                               Text(
                                 '${(goal.progress * 100).toInt()}%',
                                 style: const TextStyle(
-                                  color: Color(0xFF6C63FF),
+                                  color: AppColor.primaryColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -81,7 +82,7 @@ class GoalsScreen extends StatelessWidget {
                             lineHeight: 10.0,
                             percent: goal.progress,
                             backgroundColor: Colors.grey.withOpacity(0.2),
-                            progressColor: const Color(0xFF6C63FF),
+                            progressColor: AppColor.primaryColor,
                             barRadius: const Radius.circular(5),
                           ),
                           const SizedBox(height: 12),
