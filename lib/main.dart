@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:wellness_tracker/providers/study_provider.dart';
 import 'package:wellness_tracker/providers/theme_provider.dart';
 import 'package:wellness_tracker/screens/add_task_screen.dart';
+import 'package:wellness_tracker/screens/dashboard_screen.dart';
 import 'package:wellness_tracker/screens/home_screen.dart';
 import 'package:wellness_tracker/theme/app_theme.dart';
 
@@ -24,6 +25,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final studyProvider = Provider.of<StudyProvider>(context);
 
     return MaterialApp(
       title: 'StudyActivity',
@@ -31,7 +33,11 @@ class MainApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
-      home: const HomeScreen(),
+      home: HomeScreen(),
+      // home: studyProvider.currentUser == null ?? const,
+      // routes: {
+      //   '/login':
+      // },
     );
   }
 }

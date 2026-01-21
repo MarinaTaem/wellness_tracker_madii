@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../providers/study_provider.dart';
 import '../models/study_models.dart';
@@ -6,15 +7,40 @@ import '../models/study_models.dart';
 class SubjectsScreen extends StatelessWidget {
   const SubjectsScreen({super.key});
 
+  // Dynamic greeting
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good morning!';
+    } else if (hour < 17) {
+      return 'Good afternoon!';
+    } else if (hour < 22) {
+      return 'Good evening!';
+    } else {
+      return 'Good night!';
+    }
+  }
+
+  String _getSubGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Rise and shine! Let\'s crush it today 🚀';
+    } else if (hour < 17) {
+      return 'Keep up the momentum! You\'ve got this 💪';
+    } else if (hour < 22) {
+      return 'Almost done for the day! Great work 🌙';
+    } else {
+      return 'Time to recharge. Sweet dreams! 😴';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final studyProvider = Provider.of<StudyProvider>(context);
     final subjects = studyProvider.subjects;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Subject Folders'),
-      ),
+      appBar: appbar(),
       body: GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -28,7 +54,8 @@ class SubjectsScreen extends StatelessWidget {
           final subject = subjects[index];
           return Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: InkWell(
               onTap: () {
                 // View subject details/tasks
@@ -50,7 +77,8 @@ class SubjectsScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       subject.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 4),
@@ -83,7 +111,9 @@ class SubjectsScreen extends StatelessWidget {
           decoration: const InputDecoration(hintText: 'Subject Name'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty) {
@@ -101,6 +131,72 @@ class SubjectsScreen extends StatelessWidget {
             child: const Text('Create'),
           ),
         ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget appbar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(100),
+      child: AppBar(
+        flexibleSpace: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Left side: Dynamic Greeting
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _getGreeting(),
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      _getSubGreeting(),
+                      style: const TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Right side: Profile picture
+                GestureDetector(
+                  onTap: () {
+                    // Handle profile tap
+                  },
+                  child: Container(
+                    height: 60,
+                    width: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      color: const Color.fromARGB(255, 224, 224, 224),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: SvgPicture.asset(
+                        'assets/images/profile_default.svg',
+                        colorFilter: const ColorFilter.mode(
+                          Colors.grey,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 100,
       ),
     );
   }

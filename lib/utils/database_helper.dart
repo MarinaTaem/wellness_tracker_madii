@@ -1,3 +1,4 @@
+// import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:wellness_tracker/models/study_models.dart';
@@ -20,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 9, // version add goal feature
+      version: 1, // version add goal feature
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -28,34 +29,61 @@ class DatabaseHelper {
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print("Update databse with version $oldVersion");
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE goals ADD COLUMN description TEXT');
-      await db.execute('''
-        CREATE TABLE goal_steps (
-          id TEXT PRIMARY KEY,
-          goalId TEXT NOT NULL,
-          title TEXT NOT NULL,
-          isCompleted INTEGER NOT NULL,
-          FOREIGN KEY (goalId) REFERENCES goals (id) ON DELETE CASCADE
-        )
-      ''');
-      print("Done execute!");
-    }
-    if (oldVersion < 9) {
-      // Recreate goals table with correct schema
-      await db.execute('DROP TABLE IF EXISTS goals');
-      await db.execute('''
-        CREATE TABLE goals (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          description TEXT,
-          deadline TEXT NOT NULL
-        )
-      ''');
-    }
+    // if (oldVersion < 2) {
+    //   await db.execute('ALTER TABLE goals ADD COLUMN description TEXT');
+    //   await db.execute('''
+    //     CREATE TABLE goal_steps (
+    //       id TEXT PRIMARY KEY,
+    //       goalId TEXT NOT NULL,
+    //       title TEXT NOT NULL,
+    //       isCompleted INTEGER NOT NULL,
+    //       FOREIGN KEY (goalId) REFERENCES goals (id) ON DELETE CASCADE
+    //     )
+    //   ''');
+    //   print("Done execute!");
+    // }
+    // if (oldVersion < 9) {
+    //   // Recreate goals table with correct schema
+    //   await db.execute('DROP TABLE IF EXISTS goals');
+    //   await db.execute('''
+    //     CREATE TABLE goals (
+    //       id TEXT PRIMARY KEY,
+    //       title TEXT NOT NULL,
+    //       description TEXT,
+    //       deadline TEXT NOT NULL
+    //     )
+    //   ''');
+    // }
+    // if (oldVersion < 10) {
+    //   await db.execute('''
+    //     CREATE TABLE users (
+    //       id TEXT PRIMARY KEY,
+    //       username TEXT NOT NULL,
+    //       email TEXT NOT NULL UNIQUE,
+    //       password TEXT NOT NULL
+    //     )
+    //   ''');
+    //   await db.execute('''
+    //     CREATE TABLE focus_sessions (
+    //       id TEXT PREMARY KEY,
+    //       subjectId TEXT,
+    //       durationMinutes INTEGER NOT NULL,
+    //       startTime TEXT NOT NULL,
+    //       FOREIGN KEY (subjectId) REFERENCES subjects (id) ON DELETE CASCADE
+    //     )
+    //   ''');
+    // }
   }
 
   Future _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL
+      )
+    ''');
     await db.execute('''
       CREATE TABLE subjects (
         id TEXT PRIMARY KEY,
@@ -96,6 +124,37 @@ class DatabaseHelper {
         FOREIGN KEY (goalId) REFERENCES goals (id) ON DELETE CASCADE
       )
     ''');
+    await db.execute('''
+      CREATE TABLE focus_sessions (
+        id TEXT PRIMARY KEY,
+        subjectId TEXT,
+        durationMinutes INTEGER NOT NULL,
+        startTime TEXT NOT NULL,
+        FOREIGN KEY (subjectId) REFERENCES subject (id) ON DELETE CASCADE 
+      )
+    ''');
+  }
+
+  // User CRUD
+  Future<void> insertUser(User user) async {
+    final db = await instance.database;
+    await db.insert(
+      'users',
+      user.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.fail,
+    );
+  }
+
+  Future<User?> getUser(String email, String password) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'users',
+      where: 'email = ? AND password = ?',
+      whereArgs: [email, password],
+    );
+    if (result.isNotEmpty) {
+      return User.fromMap(result.first);
+    }
   }
 
   // Subject CRUD
@@ -199,6 +258,24 @@ class DatabaseHelper {
     await db.delete('goals', where: 'id = ?', whereArgs: [id]);
     // casecade delete should handle steps
     await db.delete('goal_steps', where: 'goalId = ?', whereArgs: [id]);
+  }
+
+  // Focus Session CRUD
+  Future<void> insertFocusSession(FocusSession session) async {
+    final db = await instance.database;
+    await db.insert(
+      'focus_sessions',
+      session.toMap(),
+    );
+  }
+
+  Future<List<FocusSession>> getAllFocusSessions() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'focus_sessions',
+      orderBy: 'startTime DESC',
+    );
+    return result.map((json) => FocusSession.fromMap(json)).toList();
   }
 
   Future<void> close() async {

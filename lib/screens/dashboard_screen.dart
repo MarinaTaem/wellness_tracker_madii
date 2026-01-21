@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
+import 'package:wellness_tracker/providers/study_provider.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final studyProvider = Provider.of<StudyProvider>(context);
+    final tasksPerSubject = studyProvider.tasksPerSubject;
+    final focusPerSubject = studyProvider.focusMinutesPerSubject;
+    final totalTasks = studyProvider.totalTasksCount;
+    final completedTasks = studyProvider.completedTasksCount;
+    final totalFocusMinutes = studyProvider.totalFocusMinutes;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Activity Dashboard')),
       body: SingleChildScrollView(
@@ -15,48 +24,151 @@ class DashboardScreen extends StatelessWidget {
           children: [
             _buildPeriodSelector(),
             const SizedBox(height: 24),
-            _buildStatCards(),
+            _buildStatCards(completedTasks, totalTasks, totalFocusMinutes),
             const SizedBox(height: 32),
             const Text(
-              'Study Hours',
+              'Focus Time per Subject (min)',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            // TIMER -
             const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: BarChart(
-                BarChartData(
-                  gridData: const FlGridData(show: false),
-                  titlesData: const FlTitlesData(show: false),
-                  borderData: FlBorderData(show: false),
-                  barGroups: [
-                    BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: 5, color: const Color(0xFF6C63FF))]),
-                    BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: 8, color: const Color(0xFF6C63FF))]),
-                    BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: 3, color: const Color(0xFF6C63FF))]),
-                    BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: 7, color: const Color(0xFF6C63FF))]),
-                    BarChartGroupData(x: 4, barRods: [BarChartRodData(toY: 6, color: const Color(0xFF6C63FF))]),
-                  ],
-                ),
-              ),
-            ),
+            focusPerSubject.isEmpty
+                ? const Center(child: Text('No focus data available'))
+                : SizedBox(
+                    height: 200,
+                    child: BarChart(
+                      BarChartData(
+                        gridData: const FlGridData(show: false),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          leftTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                int index = value.toInt();
+                                if (index >= 0 &&
+                                    index < focusPerSubject.keys.length) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      tasksPerSubject.keys
+                                          .elementAt(index)
+                                          .substring(0, 3),
+                                      style: const TextStyle(fontSize: 10),
+                                    ),
+                                  );
+                                }
+                                return const Text('');
+                              },
+                            ),
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        barGroups: focusPerSubject.entries
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((entry) {
+                          return BarChartGroupData(
+                            x: entry.key,
+                            barRods: [
+                              BarChartRodData(
+                                  toY: entry.value.value.toDouble(),
+                                  color: const Color(0xFF6C63FF),
+                                  width: 16,
+                                  borderRadius: BorderRadius.circular(4))
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+
             const SizedBox(height: 32),
             const Text(
-              'Task Completion',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: PieChart(
-                PieChartData(
-                  sections: [
-                    PieChartSectionData(value: 40, color: const Color(0xFF6C63FF), title: 'Math'),
-                    PieChartSectionData(value: 30, color: const Color(0xFF03DAC6), title: 'Physics'),
-                    PieChartSectionData(value: 30, color: Colors.orange, title: 'History'),
-                  ],
-                ),
+              'Task Distribution',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 16),
+
+            tasksPerSubject.isEmpty
+                ? const Center(child: Text('No task data available'))
+                : SizedBox(
+                    height: 200,
+                    child: PieChart(
+                      PieChartData(
+                        sections: tasksPerSubject.entries.map((entry) {
+                          final index =
+                              tasksPerSubject.keys.toList().indexOf(entry.key);
+                          final colors = [
+                            const Color(0xFF6C63FF),
+                            const Color(0xFF03DAC6),
+                            Colors.orange,
+                            Colors.pink,
+                            Colors.amber
+                          ];
+                          return PieChartSectionData(
+                            value: entry.value.toDouble(),
+                            color: colors[index % colors.length],
+                            title: entry.key,
+                            radius: 50,
+                            titleStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+            // const SizedBox(height: 32),
+            // const Text(
+            //   'Task Completion Distribution',
+            //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // ),
+            // const SizedBox(height: 16),
+            // tasksPerSubject.isEmpty
+            //     ? Center(
+            //         child: Text('No distribution data available'),
+            //       )
+            //     : SizedBox(
+            //         height: 200,
+            //         child: PieChart(PieChartData(
+            //           sections: tasksPerSubject.entries.map((entry) {
+            //             final index =
+            //                 tasksPerSubject.keys.toList().indexOf(entry.key);
+            //             final colors = [
+            //               const Color(0xFF6C63FF),
+            //               const Color(0xFF03DAC6),
+            //               Colors.orange,
+            //               Colors.pink,
+            //               Colors.amber
+            //             ];
+
+            //             return PieChartSectionData(
+            //               value: entry.value.toDouble(),
+            //               color: colors[index % colors.length],
+            //               title: entry.key,
+            //               radius: 50,
+            //               titleStyle: const TextStyle(
+            //                 fontSize: 12,
+            //                 fontWeight: FontWeight.bold,
+            //                 color: Colors.white,
+            //               ),
+            //             );
+            //           }).toList(),
+            //         )),
+            //       ),
           ],
         ),
       ),
@@ -82,12 +194,43 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCards() {
-    return Row(
+  Widget _buildStatCards(int completed, int total, int focus) {
+    return Column(
       children: [
-        _statCard('Focus Time', '12.5h', Icons.timer, Colors.blue),
-        const SizedBox(width: 16),
-        _statCard('Tasks Done', '24', Icons.check_circle, Colors.green),
+        Row(
+          children: [
+            _statCard(
+                'Total Tasks', total.toString(), Icons.assignment, Colors.blue),
+            const SizedBox(width: 16),
+            _statCard('Completed', completed.toString(), Icons.check_circle,
+                Colors.green),
+            const SizedBox(width: 16),
+            _statCard(
+              'Efficiency',
+              total == 0 ? '0%' : '${(completed / total * 100).toInt()}%',
+              Icons.trending_up,
+              Colors.purple,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            _statCard(
+              'Focus Time',
+              '${focus}m',
+              Icons.timer,
+              Colors.orange,
+            ),
+            const SizedBox(width: 16),
+            _statCard(
+              'Efficiency',
+              total == 0 ? '0%' : '${(completed / total * 100).toInt()}%',
+              Icons.trending_up,
+              Colors.purple,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -105,7 +248,9 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Icon(icon, color: color),
             const SizedBox(height: 12),
-            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             Text(title, style: const TextStyle(color: Colors.grey)),
           ],
         ),

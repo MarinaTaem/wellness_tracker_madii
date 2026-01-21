@@ -1,5 +1,40 @@
 import 'package:flutter/material.dart';
 
+class User {
+  final String id;
+  final String username;
+  final String email;
+  final String password;
+  final String imgUrl;
+
+  User({
+    required this.id,
+    required this.username,
+    required this.email,
+    required this.password,
+    this.imgUrl = '',
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'password': password,
+    };
+  }
+
+  factory User.fromMap(Map<String, dynamic> map) {
+    return User(
+      id: map['id'],
+      username: map['username'],
+      email: map['email'],
+      password: map['password'],
+      imgUrl: map['imgUrl'],
+    );
+  }
+}
+
 class Subject {
   final String id;
   final String name;
@@ -148,6 +183,38 @@ class StudyGoal {
       description: map['description'] ?? '',
       deadline: DateTime.parse(map['deadline']),
       steps: steps,
+    );
+  }
+}
+
+class FocusSession {
+  final String id;
+  final String? subjectId;
+  final int durationMinutes;
+  final DateTime startTime;
+
+  FocusSession({
+    required this.id,
+    this.subjectId,
+    required this.durationMinutes,
+    required this.startTime,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'subjectId': subjectId,
+      'durationMinutes': durationMinutes,
+      'startTime': startTime.toIso8601String(),
+    };
+  }
+
+  factory FocusSession.fromMap(Map<String, dynamic> map) {
+    return FocusSession(
+      id: map['id'],
+      subjectId: map['subjectId'],
+      durationMinutes: map['durationMinutes'],
+      startTime: map['startTime'],
     );
   }
 }
