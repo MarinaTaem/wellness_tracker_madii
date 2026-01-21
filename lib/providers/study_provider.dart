@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wellness_tracker/utils/database_helper.dart';
 import '../models/study_models.dart';
 
@@ -8,93 +9,75 @@ class StudyProvider with ChangeNotifier {
   List<StudyTask> _tasks = [];
   List<StudyGoal> _goals = [];
   List<FocusSession> _focusSessions = [];
+  bool _isInitialized = false;
 
   User? get currentUser => _currentUser;
   List<Subject> get subjects => [..._subjects];
   List<StudyTask> get tasks => [..._tasks];
   List<StudyGoal> get goals => [..._goals];
   List<FocusSession> get focusSessions => [..._focusSessions];
+  bool get isInitialized => _isInitialized;
 
   //
   StudyProvider() {
-    _loadData();
+    _init();
   }
   //
 
-  Future<void> _loadData() async {
-    _subjects = await DatabaseHelper.instance.getAllSubjects();
-    _tasks = await DatabaseHelper.instance.getAllTasks();
-    _goals = await DatabaseHelper.instance.getAllGoal();
-    _focusSessions = await DatabaseHelper.instance.getAllFocusSessions();
+  Future<void> _init() async {
+    await _checkAutoLogin();
+    _isInitialized = true;
+    notifyListeners();
+  }
 
-    // Tast data - initial data if empty
+  Future<void> _checkAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+    if (userId != null) {
+      final user = await DatabaseHelper.instance.getUserById(userId);
+      if (user != null) {
+        _currentUser = user;
+        await _loadUserData();
+      }
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    if (_currentUser == null) return;
+    final userId = _currentUser!.id;
+    _subjects = await DatabaseHelper.instance.getSubjectsByUser(userId);
+    _tasks = await DatabaseHelper.instance.getTasksByUser(userId);
+    _goals = await DatabaseHelper.instance.getGoalsByUser(userId);
+    _focusSessions =
+        await DatabaseHelper.instance.getFocusSessionsByUser(userId);
+
     if (_subjects.isEmpty && _goals.isEmpty) {
       await _addInitialData();
     }
-
     notifyListeners();
   }
 
   Future<void> _addInitialData() async {
+    if (_currentUser == null) return;
+    final userId = _currentUser!.id;
     final initialSubjects = [
       Subject(
-          id: '1',
+          id: '1_${userId}',
+          userId: userId,
           name: 'Mathematics',
           color: Colors.blue,
           icon: Icons.calculate),
       Subject(
-          id: '2', name: 'Physics', color: Colors.orange, icon: Icons.science),
-      Subject(
-          id: '3',
-          name: 'History',
-          color: Colors.brown,
-          icon: Icons.history_edu),
+          id: '2_${userId}',
+          userId: userId,
+          name: 'Physics',
+          color: Colors.orange,
+          icon: Icons.science),
     ];
 
     for (var subject in initialSubjects) {
       await addSubject(subject);
     }
-
-    final initialTasks = [
-      StudyTask(
-        id: '1',
-        title: 'Calculus Homework',
-        description: 'Complete exercises 1-10',
-        subjectId: '1',
-        dueDate: DateTime.now().add(const Duration(days: 1)),
-        priority: 3,
-      ),
-    ];
-
-    for (var task in initialTasks) {
-      await addTask(task);
-    }
-
-    final goalId = DateTime.now().millisecondsSinceEpoch.toString();
-    final initialGoal = StudyGoal(
-      id: '1',
-      title: 'Finish Semester Project',
-      description: 'Learn Flutter from basic to advaced state management.',
-      deadline: DateTime.now().add(const Duration(days: 30)),
-      steps: [
-        GoalStep(
-            id: 's1',
-            goalId: goalId,
-            title: 'Learn Dart Basics',
-            isCompleted: true),
-        GoalStep(
-            id: 's2',
-            goalId: goalId,
-            title: 'Understand Widgets',
-            isCompleted: false),
-        GoalStep(
-            id: 's3',
-            goalId: goalId,
-            title: 'Master Provider',
-            isCompleted: false),
-      ],
-    );
-    await addGoal(initialGoal);
   }
 
   // Auth Methods
@@ -108,7 +91,11 @@ class StudyProvider with ChangeNotifier {
       );
       await DatabaseHelper.instance.insertUser(user);
       _currentUser = user;
-      notifyListeners();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', user.id);
+
+      await _loadUserData();
       return true;
     } catch (e) {
       return false;
@@ -119,14 +106,26 @@ class StudyProvider with ChangeNotifier {
     final user = await DatabaseHelper.instance.getUser(email, password);
     if (user != null) {
       _currentUser = user;
-      notifyListeners();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', user.id);
+
+      await _loadUserData();
       return true;
     }
     return false;
   }
 
-  void signOut() {
+  Future<void> signOut() async {
     _currentUser = null;
+    _subjects = [];
+    _tasks = [];
+    _goals = [];
+    _focusSessions = [];
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId');
+
     notifyListeners();
   }
 
@@ -139,9 +138,6 @@ class StudyProvider with ChangeNotifier {
     return _focusSessions.fold(
         0, (sum, session) => sum + session.durationMinutes);
   }
-
-  // double get taskCompletionRate =>
-  //     totalTasksCount == 0 ? 0 : completedTasksCount / totalTasksCount;
 
   Map<String, int> get tasksPerSubject {
     Map<String, int> data = {};
@@ -199,6 +195,7 @@ class StudyProvider with ChangeNotifier {
       final task = _tasks[index];
       final updatedTask = StudyTask(
         id: task.id,
+        userId: task.userId,
         title: task.title,
         description: task.description,
         subjectId: task.subjectId,
@@ -226,24 +223,24 @@ class StudyProvider with ChangeNotifier {
       final stepIndex = goal.steps.indexWhere((s) => s.id == stepId);
       if (stepIndex >= 0) {
         final step = goal.steps[stepIndex];
-        final updateStep = GoalStep(
+        final updatedStep = GoalStep(
           id: step.id,
           goalId: step.goalId,
           title: step.title,
           isCompleted: !step.isCompleted,
         );
-        await DatabaseHelper.instance.updateGoalStep(updateStep);
+        await DatabaseHelper.instance.updateGoalStep(updatedStep);
 
-        // Update local state
-        final updateSteps = List<GoalStep>.from(goal.steps);
-        updateSteps[stepIndex] = updateStep;
+        final updatedSteps = List<GoalStep>.from(goal.steps);
+        updatedSteps[stepIndex] = updatedStep;
 
         _goals[goalIndex] = StudyGoal(
           id: goal.id,
+          userId: goal.userId,
           title: goal.title,
           description: goal.description,
           deadline: goal.deadline,
-          steps: updateSteps,
+          steps: updatedSteps,
         );
         notifyListeners();
       }
@@ -260,6 +257,7 @@ class StudyProvider with ChangeNotifier {
   Future<void> addFocusSession(int durationMinutes, {String? subjectId}) async {
     final session = FocusSession(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: _currentUser!.id,
       subjectId: subjectId,
       durationMinutes: durationMinutes,
       startTime: DateTime.now().subtract(Duration(minutes: durationMinutes)),

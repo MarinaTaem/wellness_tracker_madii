@@ -2,18 +2,67 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:wellness_tracker/providers/study_provider.dart';
+import '../models/study_models.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  String selectedPeriod = 'Weekly';
+
+  DateTime getStartDate(String period) {
+    final now = DateTime.now();
+    switch (period) {
+      case 'Daily':
+        return now.subtract(const Duration(days: 1));
+      case 'Weekly':
+        return now.subtract(const Duration(days: 7));
+      case 'Monthly':
+        return now.subtract(const Duration(days: 30));
+      case 'Yearly':
+        return now.subtract(const Duration(days: 365));
+      default:
+        return now.subtract(const Duration(days: 7));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final studyProvider = Provider.of<StudyProvider>(context);
-    final tasksPerSubject = studyProvider.tasksPerSubject;
-    final focusPerSubject = studyProvider.focusMinutesPerSubject;
-    final totalTasks = studyProvider.totalTasksCount;
-    final completedTasks = studyProvider.completedTasksCount;
-    final totalFocusMinutes = studyProvider.totalFocusMinutes;
+    final startDate = getStartDate(selectedPeriod);
+    final filteredTasks =
+        studyProvider.tasks.where((t) => t.dueDate.isAfter(startDate)).toList();
+    final filteredFocusSessions = studyProvider.focusSessions
+        .where((s) => s.startTime.isAfter(startDate))
+        .toList();
+
+    final tasksPerSubject = <String, int>{};
+    for (var subject in studyProvider.subjects) {
+      int count = filteredTasks.where((t) => t.subjectId == subject.id).length;
+      if (count > 0) {
+        tasksPerSubject[subject.name] = count;
+      }
+    }
+
+    final focusPerSubject = <String, int>{};
+    for (var subject in studyProvider.subjects) {
+      int minutes = filteredFocusSessions
+          .where((s) => s.subjectId == subject.id)
+          .fold(0, (sum, s) => sum + s.durationMinutes);
+      if (minutes > 0) {
+        focusPerSubject[subject.name] = minutes;
+      }
+    }
+
+    final totalTasks = filteredTasks.length;
+    final completedTasks =
+        filteredTasks.where((t) => t.status == TaskStatus.completed).length;
+    final totalFocusMinutes = filteredFocusSessions.fold(
+        0, (sum, session) => sum + session.durationMinutes);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Activity Dashboard')),
@@ -30,7 +79,6 @@ class DashboardScreen extends StatelessWidget {
               'Focus Time per Subject (min)',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            // TIMER -
             const SizedBox(height: 16),
             focusPerSubject.isEmpty
                 ? const Center(child: Text('No focus data available'))
@@ -57,7 +105,7 @@ class DashboardScreen extends StatelessWidget {
                                   return Padding(
                                     padding: const EdgeInsets.only(top: 8.0),
                                     child: Text(
-                                      tasksPerSubject.keys
+                                      focusPerSubject.keys
                                           .elementAt(index)
                                           .substring(0, 3),
                                       style: const TextStyle(fontSize: 10),
@@ -89,7 +137,6 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
             const SizedBox(height: 32),
             const Text(
               'Task Distribution',
@@ -99,7 +146,6 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
             tasksPerSubject.isEmpty
                 ? const Center(child: Text('No task data available'))
                 : SizedBox(
@@ -131,44 +177,6 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-            // const SizedBox(height: 32),
-            // const Text(
-            //   'Task Completion Distribution',
-            //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            // ),
-            // const SizedBox(height: 16),
-            // tasksPerSubject.isEmpty
-            //     ? Center(
-            //         child: Text('No distribution data available'),
-            //       )
-            //     : SizedBox(
-            //         height: 200,
-            //         child: PieChart(PieChartData(
-            //           sections: tasksPerSubject.entries.map((entry) {
-            //             final index =
-            //                 tasksPerSubject.keys.toList().indexOf(entry.key);
-            //             final colors = [
-            //               const Color(0xFF6C63FF),
-            //               const Color(0xFF03DAC6),
-            //               Colors.orange,
-            //               Colors.pink,
-            //               Colors.amber
-            //             ];
-
-            //             return PieChartSectionData(
-            //               value: entry.value.toDouble(),
-            //               color: colors[index % colors.length],
-            //               title: entry.key,
-            //               radius: 50,
-            //               titleStyle: const TextStyle(
-            //                 fontSize: 12,
-            //                 fontWeight: FontWeight.bold,
-            //                 color: Colors.white,
-            //               ),
-            //             );
-            //           }).toList(),
-            //         )),
-            //       ),
           ],
         ),
       ),
@@ -180,13 +188,16 @@ class DashboardScreen extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: ['Daily', 'Weekly', 'Monthly', 'Yearly'].map((period) {
-          bool isSelected = period == 'Weekly';
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
               label: Text(period),
-              selected: isSelected,
-              onSelected: (_) {},
+              selected: period == selectedPeriod,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() => selectedPeriod = period);
+                }
+              },
             ),
           );
         }).toList(),

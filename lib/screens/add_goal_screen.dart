@@ -49,8 +49,10 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   }
 
   void _saveGoal() {
-    if (_formKey.currentState!.validate()) {
+    final provider = Provider.of<StudyProvider>(context, listen: false);
+    if (_formKey.currentState!.validate() && provider.currentUser != null) {
       final goalId = DateTime.now().millisecondsSinceEpoch.toString();
+      final userId = provider.currentUser!.id;
       final steps = _stepControllers
           .where((c) => c.text.isNotEmpty)
           .map((c) => GoalStep(
@@ -63,15 +65,13 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
       final newGoal = StudyGoal(
         id: goalId,
+        userId: userId,
         title: _titleController.text,
         description: _descriptionController.text,
         deadline: _selectedDate,
         steps: steps,
       );
-      print("New goal: ${newGoal.id}");
-      Provider.of<StudyProvider>(context, listen: false).addGoal(newGoal);
-      final goalList = Provider.of<StudyProvider>(context, listen: false).goals;
-      print("New goal: ${goalList}");
+      provider.addGoal(newGoal);
       Navigator.pop(context);
     }
   }

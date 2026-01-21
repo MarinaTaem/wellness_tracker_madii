@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wellness_tracker/providers/study_provider.dart';
 import 'package:wellness_tracker/providers/theme_provider.dart';
-import 'package:wellness_tracker/screens/add_task_screen.dart';
-import 'package:wellness_tracker/screens/dashboard_screen.dart';
 import 'package:wellness_tracker/screens/home_screen.dart';
+import 'package:wellness_tracker/screens/login_screen.dart';
 import 'package:wellness_tracker/theme/app_theme.dart';
 
 void main() {
@@ -33,11 +32,20 @@ class MainApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
-      home: HomeScreen(),
-      // home: studyProvider.currentUser == null ?? const,
-      // routes: {
-      //   '/login':
-      // },
+      // home: HomeScreen(),
+      home: !studyProvider.isInitialized == null
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          : (studyProvider.currentUser == null
+              ? const LoginScreen()
+              : const HomeScreen()),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
+      },
     );
   }
 }

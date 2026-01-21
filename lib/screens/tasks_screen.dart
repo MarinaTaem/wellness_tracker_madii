@@ -34,6 +34,7 @@ class _TasksScreenState extends State<TasksScreen> {
             .firstWhere((s) => s.id == a,
                 orElse: () => Subject(
                     id: a,
+                    userId: '',
                     name: 'Unknown',
                     color: Colors.grey,
                     icon: Icons.book))
@@ -43,6 +44,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 orElse: () => Subject(
                     id: b,
                     name: 'Unknown',
+                    userId: '',
                     color: Colors.grey,
                     icon: Icons.book))
             .name;
@@ -93,6 +95,7 @@ class _TasksScreenState extends State<TasksScreen> {
                         (s) => s.id == subjectId,
                         orElse: () => Subject(
                           id: subjectId,
+                          userId: '',
                           name: 'Unknown Subject',
                           color: Colors.grey,
                           icon: Icons.book,

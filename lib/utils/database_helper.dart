@@ -21,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1, // version add goal feature
+      version: 2, // version add goal feature
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -29,50 +29,17 @@ class DatabaseHelper {
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print("Update databse with version $oldVersion");
-    // if (oldVersion < 2) {
-    //   await db.execute('ALTER TABLE goals ADD COLUMN description TEXT');
-    //   await db.execute('''
-    //     CREATE TABLE goal_steps (
-    //       id TEXT PRIMARY KEY,
-    //       goalId TEXT NOT NULL,
-    //       title TEXT NOT NULL,
-    //       isCompleted INTEGER NOT NULL,
-    //       FOREIGN KEY (goalId) REFERENCES goals (id) ON DELETE CASCADE
-    //     )
-    //   ''');
-    //   print("Done execute!");
-    // }
-    // if (oldVersion < 9) {
-    //   // Recreate goals table with correct schema
-    //   await db.execute('DROP TABLE IF EXISTS goals');
-    //   await db.execute('''
-    //     CREATE TABLE goals (
-    //       id TEXT PRIMARY KEY,
-    //       title TEXT NOT NULL,
-    //       description TEXT,
-    //       deadline TEXT NOT NULL
-    //     )
-    //   ''');
-    // }
-    // if (oldVersion < 10) {
-    //   await db.execute('''
-    //     CREATE TABLE users (
-    //       id TEXT PRIMARY KEY,
-    //       username TEXT NOT NULL,
-    //       email TEXT NOT NULL UNIQUE,
-    //       password TEXT NOT NULL
-    //     )
-    //   ''');
-    //   await db.execute('''
-    //     CREATE TABLE focus_sessions (
-    //       id TEXT PREMARY KEY,
-    //       subjectId TEXT,
-    //       durationMinutes INTEGER NOT NULL,
-    //       startTime TEXT NOT NULL,
-    //       FOREIGN KEY (subjectId) REFERENCES subjects (id) ON DELETE CASCADE
-    //     )
-    //   ''');
-    // }
+    if (oldVersion < 2) {
+      // For simplicity in this sandbox, we'll drop and recreate to ensure userId is everywhere
+      // In a real app, you'd use ALTER TABLE
+      await db.execute('DROP TABLE IF EXISTS focus_sessions');
+      await db.execute('DROP TABLE IF EXISTS goal_steps');
+      await db.execute('DROP TABLE IF EXISTS goals');
+      await db.execute('DROP TABLE IF EXISTS tasks');
+      await db.execute('DROP TABLE IF EXISTS subjects');
+      await db.execute('DROP TABLE IF EXISTS users');
+      await _createDB(db, newVersion);
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -87,21 +54,25 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE subjects (
         id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
         name TEXT NOT NULL,
         color INTEGER NOT NULL,
-        icon INTEGER NOT NULL
+        icon INTEGER NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
 
     await db.execute('''
       CREATE TABLE tasks (
         id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
         subjectId TEXT NOT NULL,
         dueDate TEXT NOT NULL,
         status INTEGER NOT NULL,
         priority INTEGER NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (subjectId) REFERENCES subjects (id) ON DELETE CASCADE
       )
     ''');
@@ -109,9 +80,11 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE goals (
         id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
-        deadline TEXT NOT NULL
+        deadline TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
 
@@ -127,9 +100,11 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE focus_sessions (
         id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
         subjectId TEXT,
         durationMinutes INTEGER NOT NULL,
         startTime TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (subjectId) REFERENCES subject (id) ON DELETE CASCADE 
       )
     ''');
@@ -155,6 +130,16 @@ class DatabaseHelper {
     if (result.isNotEmpty) {
       return User.fromMap(result.first);
     }
+    return null;
+  }
+
+  Future<User?> getUserById(String id) async {
+    final db = await instance.database;
+    final result = await db.query('users', where: 'id = ?', whereArgs: [id]);
+    if (result.isNotEmpty) {
+      return User.fromMap(result.first);
+    }
+    return null;
   }
 
   // Subject CRUD
@@ -173,6 +158,13 @@ class DatabaseHelper {
     return result.map((json) => Subject.fromMap(json)).toList();
   }
 
+  Future<List<Subject>> getSubjectsByUser(String userId) async {
+    final db = await instance.database;
+    final result =
+        await db.query('subjects', where: 'userId = ?', whereArgs: [userId]);
+    return result.map((json) => Subject.fromMap(json)).toList();
+  }
+
   Future<void> deleteSubject(String id) async {
     final db = await instance.database;
     await db.delete('subjects', where: 'id = ?', whereArgs: [id]);
@@ -188,9 +180,16 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<StudyTask>> getAllTasks() async {
+  // Future<List<StudyTask>> getAllTasks() async {
+  //   final db = await instance.database;
+  //   final result = await db.query('tasks');
+  //   return result.map((json) => StudyTask.fromMap(json)).toList();
+  // }
+
+  Future<List<StudyTask>> getTasksByUser(String userId) async {
     final db = await instance.database;
-    final result = await db.query('tasks');
+    final result =
+        await db.query('tasks', where: 'userId = ?', whereArgs: [userId]);
     return result.map((json) => StudyTask.fromMap(json)).toList();
   }
 
@@ -232,20 +231,35 @@ class DatabaseHelper {
     });
   }
 
-  Future<List<StudyGoal>> getAllGoal() async {
+  Future<List<StudyGoal>> getGoalsByUser(String userId) async {
     final db = await instance.database;
-    final goalResult = await db.query('goals');
+    final goalsResult =
+        await db.query('goals', where: 'userId = ?', whereArgs: [userId]);
 
     List<StudyGoal> goals = [];
-    for (var goalMap in goalResult) {
-      final stepResult = await db
+    for (var goalMap in goalsResult) {
+      final stepsResult = await db
           .query('goal_steps', where: 'goalId = ?', whereArgs: [goalMap['id']]);
-      final steps = stepResult.map((s) => GoalStep.fromMap(s)).toList();
+      final steps = stepsResult.map((s) => GoalStep.fromMap(s)).toList();
       goals.add(StudyGoal.fromMap(goalMap, steps: steps));
     }
-
     return goals;
   }
+
+  // Future<List<StudyGoal>> getAllGoal() async {
+  //   final db = await instance.database;
+  //   final goalResult = await db.query('goals');
+
+  //   List<StudyGoal> goals = [];
+  //   for (var goalMap in goalResult) {
+  //     final stepResult = await db
+  //         .query('goal_steps', where: 'goalId = ?', whereArgs: [goalMap['id']]);
+  //     final steps = stepResult.map((s) => GoalStep.fromMap(s)).toList();
+  //     goals.add(StudyGoal.fromMap(goalMap, steps: steps));
+  //   }
+
+  //   return goals;
+  // }
 
   Future<void> updateGoalStep(GoalStep step) async {
     final db = await instance.database;
@@ -269,14 +283,21 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<FocusSession>> getAllFocusSessions() async {
+  Future<List<FocusSession>> getFocusSessionsByUser(String userId) async {
     final db = await instance.database;
-    final result = await db.query(
-      'focus_sessions',
-      orderBy: 'startTime DESC',
-    );
+    final result = await db.query('focus_sessions',
+        where: 'userId = ?', whereArgs: [userId], orderBy: 'startTime DESC');
     return result.map((json) => FocusSession.fromMap(json)).toList();
   }
+
+  // Future<List<FocusSession>> getAllFocusSessions() async {
+  //   final db = await instance.database;
+  //   final result = await db.query(
+  //     'focus_sessions',
+  //     orderBy: 'startTime DESC',
+  //   );
+  //   return result.map((json) => FocusSession.fromMap(json)).toList();
+  // }
 
   Future<void> close() async {
     final db = await instance.database;

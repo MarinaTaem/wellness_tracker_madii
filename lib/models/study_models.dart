@@ -26,23 +26,25 @@ class User {
 
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
-      id: map['id'],
-      username: map['username'],
-      email: map['email'],
-      password: map['password'],
-      imgUrl: map['imgUrl'],
+      id: map['id'] ?? '',
+      username: map['username'] ?? '',
+      email: map['email'] ?? '',
+      password: map['password'] ?? '',
+      imgUrl: map['imgUrl'] ?? '',
     );
   }
 }
 
 class Subject {
   final String id;
+  final String userId;
   final String name;
   final Color color;
   final IconData icon;
 
   Subject({
     required this.id,
+    required this.userId,
     required this.name,
     required this.color,
     required this.icon,
@@ -51,6 +53,7 @@ class Subject {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId,
       'name': name,
       'color': color.value,
       'icon': icon.codePoint
@@ -60,6 +63,7 @@ class Subject {
   factory Subject.fromMap(Map<String, dynamic> map) {
     return Subject(
       id: map['id'],
+      userId: map['userId'] ?? '',
       name: map['name'],
       color: Color(map['color']),
       icon: IconData(map['icon'], fontFamily: 'MaterialIcons'),
@@ -71,6 +75,7 @@ enum TaskStatus { todo, inProgress, completed }
 
 class StudyTask {
   final String id;
+  final String userId;
   final String title;
   final String description;
   final String subjectId;
@@ -80,6 +85,7 @@ class StudyTask {
 
   StudyTask({
     required this.id,
+    required this.userId,
     required this.title,
     required this.description,
     required this.subjectId,
@@ -91,6 +97,7 @@ class StudyTask {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId,
       'title': title,
       'description': description,
       'subjectId': subjectId,
@@ -103,6 +110,7 @@ class StudyTask {
   factory StudyTask.fromMap(Map<String, dynamic> map) {
     return StudyTask(
       id: map['id'],
+      userId: map['userId'] ?? '',
       title: map['title'],
       description: map['description'],
       subjectId: map['subjectId'],
@@ -147,6 +155,7 @@ class GoalStep {
 
 class StudyGoal {
   final String id;
+  final String userId;
   final String title;
   final String description;
   final DateTime deadline;
@@ -154,6 +163,7 @@ class StudyGoal {
 
   StudyGoal({
     required this.id,
+    required this.userId,
     required this.title,
     required this.description,
     required this.deadline,
@@ -169,6 +179,7 @@ class StudyGoal {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId,
       'title': title,
       'description': description,
       'deadline': deadline.toIso8601String(),
@@ -179,6 +190,7 @@ class StudyGoal {
       {List<GoalStep> steps = const []}) {
     return StudyGoal(
       id: map['id'],
+      userId: map['userId'] ?? '',
       title: map['title'],
       description: map['description'] ?? '',
       deadline: DateTime.parse(map['deadline']),
@@ -189,12 +201,14 @@ class StudyGoal {
 
 class FocusSession {
   final String id;
+  final String userId;
   final String? subjectId;
   final int durationMinutes;
   final DateTime startTime;
 
   FocusSession({
     required this.id,
+    required this.userId,
     this.subjectId,
     required this.durationMinutes,
     required this.startTime,
@@ -203,6 +217,7 @@ class FocusSession {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId,
       'subjectId': subjectId,
       'durationMinutes': durationMinutes,
       'startTime': startTime.toIso8601String(),
@@ -212,6 +227,7 @@ class FocusSession {
   factory FocusSession.fromMap(Map<String, dynamic> map) {
     return FocusSession(
       id: map['id'],
+      userId: map['userId'],
       subjectId: map['subjectId'],
       durationMinutes: map['durationMinutes'],
       startTime: map['startTime'],

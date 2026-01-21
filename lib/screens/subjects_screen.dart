@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:wellness_tracker/screens/setting_screen.dart';
 import '../providers/study_provider.dart';
 import '../models/study_models.dart';
 
@@ -40,7 +41,7 @@ class SubjectsScreen extends StatelessWidget {
     final subjects = studyProvider.subjects;
 
     return Scaffold(
-      appBar: appbar(),
+      appBar: appbar(context),
       body: GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -102,6 +103,7 @@ class SubjectsScreen extends StatelessWidget {
 
   void _showAddSubjectDialog(BuildContext context) {
     final nameController = TextEditingController();
+    final provider = Provider.of<StudyProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -117,9 +119,10 @@ class SubjectsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty) {
-                Provider.of<StudyProvider>(context, listen: false).addSubject(
+                provider.addSubject(
                   Subject(
                     id: DateTime.now().toString(),
+                    userId: provider.currentUser!.id,
                     name: nameController.text,
                     color: Colors.blue,
                     icon: Icons.folder,
@@ -135,7 +138,7 @@ class SubjectsScreen extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget appbar() {
+  PreferredSizeWidget appbar(BuildContext context) {
     return PreferredSize(
       preferredSize: const Size.fromHeight(100),
       child: AppBar(
@@ -168,7 +171,12 @@ class SubjectsScreen extends StatelessWidget {
                 // Right side: Profile picture
                 GestureDetector(
                   onTap: () {
-                    // Handle profile tap
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingScreen(),
+                      ),
+                    );
                   },
                   child: Container(
                     height: 60,
@@ -193,7 +201,7 @@ class SubjectsScreen extends StatelessWidget {
             ),
           ),
         ),
-        backgroundColor: Colors.white,
+        // backgroundColor: Colors.grey.shade400,
         elevation: 0,
         automaticallyImplyLeading: false,
         toolbarHeight: 100,

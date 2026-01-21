@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:wellness_tracker/screens/tasks_screen.dart';
 
 import '../models/study_models.dart';
 import '../providers/study_provider.dart';
@@ -39,6 +38,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   void _submitTask() {
+    final provider = Provider.of<StudyProvider>(context, listen: false);
     if (_formKey.currentState!.validate()) {
       if (_selectedSubject == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -49,6 +49,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
       final newTask = StudyTask(
         id: const Uuid().v4(),
+        userId: provider.currentUser!.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         subjectId: _selectedSubject!.id,
